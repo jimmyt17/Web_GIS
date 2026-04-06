@@ -1,0 +1,81 @@
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Chicago Buildings Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- D3 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { margin:0; padding:0; }
+        #map { width: 100vw; height: 100vh; }
+        h2 { position: absolute; top: 10px; left: 10px; z-index: 1000; background:white; padding:5px; }
+    </style>
+</head>
+<body>
+<h2>Hover over a building</h2>
+<div id="map"></div>
+
+<script>
+    var map = L.map('map').setView([41.8781, -87.6298], 11);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var minVal = 1900;
+    var maxVal = 2020;
+    var ramp = d3.scaleLinear()
+        .domain([minVal, maxVal])
+        .range(["#bc2a66", "#f9f9f9"]);
+
+    d3.csv("https://jimmyt17.github.io/Web_GIS/Lab08/NeighborhoodLabels.csv").then(function(csvData) {
+        var labelLookup = {};
+        csvData.forEach(d => {
+            labelLookup[d.ID] = d.PRI_NEIGH;
+        });
+
+        fetch("https://jimmyt17.github.io/Web_GIS/Lab08/Neighborhoods.geojson")
+            .then(response => response.json())
+            .then(data => {
+                
+                L.geoJSON(data, {
+                    style: function(feature) {
+                        return {
+                            color: "#999",
+                            weight: 1,
+                            fillColor: ramp(feature.properties.RESYRBLT),
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        var label = labelLookup[feature.properties.ID] || "No label";
+                        layer.bindPopup(label);
+
+                        layer.on({
+                            mouseover: function(e) {
+                                layer.setStyle({weight: 2, color: "yellow"});
+                                d3.select("h2").text("Built in " + feature.properties.RESYRBLT);
+                            },
+                            mouseout: function(e) {
+                                layer.setStyle({weight: 1, color: "#999"});
+                                d3.select("h2").text("");
+                            }
+                        });
+                    }
+                }).addTo(map);
+            })
+            .catch(err => console.error("Failed to load GeoJSON:", err));
+    });
+</script>
+</body>
+</html>
+```
