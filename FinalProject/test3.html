@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>PFAS in Lincoln Surface Water</title>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.26/esri/themes/dark/main.css"
+    />
+    <script src="https://js.arcgis.com/4.26/"></script>
+
+    <style>
+      html, body, #viewDiv {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      #legendDiv {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      }
+
+      #controls {
+        position: absolute;
+        top: 0px;
+        left: 10px;
+        background-color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      }
+      #controls label {
+  display: block;     
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+        border: 1px solid #000;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+
+    <!--  Layer Controls -->
+    <div id="controls">
+      <strong>Layers</strong><br>
+      <label><input type="checkbox" id="toggleWatershed" checked> Watersheds</label><br>
+      <label><input type="checkbox" id="toggleSurface" checked> Surface Water</label><br>
+      <label><input type="checkbox" id="toggleAirport" checked> Airport</label><br>
+      <label><input type="checkbox" id="toggleLincoln" checked> Lincoln Boundary</label>
+      <label><input type="checkbox" id="toggleBasemap" checked> Satellite Basemap</label>
+    </div>
+
+    <!--  Legend -->
+    <div id="legendDiv">
+  <strong>Legend</strong>
+
+  <hr>
+
+  <!-- PFAS -->
+  <strong>PFAS Levels</strong>
+  <div class="legend-item">
+    <div class="legend-color" style="background-color: rgba(6, 36, 121, 0.6)"></div>
+    Low (0–4 ppt)
+  </div>
+  <div class="legend-item">
+    <div class="legend-color" style="background-color: rgba(229, 233, 11, 0.7)"></div>
+    Moderate (4–70 ppt)
+  </div>
+  <div class="legend-item">
+    <div class="legend-color" style="background-color: rgba(228, 10, 10, 0.8)"></div>
+    High (>70 ppt)
+  </div>
+
+  <hr>
+
+  <!-- Airport -->
+  <strong>Sources</strong>
+  <div class="legend-item">
+    <div class="legend-color" style="background-color: rgba(27, 203, 238, 0.5)"></div>
+    Airport (PFAS source)
+  </div>
+
+  <hr>
+
+  <!-- Boundaries -->
+  <strong>Boundaries</strong>
+  <div class="legend-item">
+    <div class="legend-color" style="background-color: rgba(227, 25, 55, 0.25); border: 2px solid rgb(227,25,55)"></div>
+    Lincoln Boundary
+  </div>
+
+  <div class="legend-item">
+    <div class="legend-color" style="background-color: transparent; border: 2px solid black"></div>
+    Watersheds
+  </div>
+</div>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/GeoJSONLayer"
+      ], function(Map, MapView, GeoJSONLayer) {
+
+        // Watersheds
+        const watershedLayer = new GeoJSONLayer({
+          title: "Watersheds",
+          url:
+            "https://gis.lincoln.ne.gov/public/rest/services/LTUWatershed/WatershedBasins/MapServer/0/query?" +
+            "where=1=1&outFields=*&f=geojson",
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [0, 0, 0, 0],
+              outline: { color: [0, 0, 0], width: 1 }
+            }
+          }
+        });
+
+        
+        // Airport
+        const airportLayer = new GeoJSONLayer({
+          url: "https://jimmyt17.github.io/Web_GIS/FinalProject/Airport.geojson",
+          title: "Airport",
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [27, 203, 238, 0.5],
+              outline: { color: [0, 0, 0], width: 1.5 }
+            }
+          },
+          popupTemplate: {
+            title: "Lincoln Airport",
+            content: "AFFF historically used here for firefighting that can cause PFAS contamination."
+          }
+        });
+
+        // Lincoln
+        const lincolnLayer = new GeoJSONLayer({
+          url: "https://jimmyt17.github.io/Web_GIS/FinalProject/Lincoln.geojson",
+          title: "Lincoln Boundary",
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [227, 25, 55, 0.25],
+              outline: { color: [227, 25, 55], width: 2 }
+            }
+          },
+          popupTemplate: {
+            title: "City of Lincoln Boundary",
+            content: "Boundaries of Lincoln."          }
+        });
+
+        // Surface Water
+        const surfaceWaterLayer = new GeoJSONLayer({
+          url: "https://jimmyt17.github.io/Web_GIS/FinalProject/surfacewater2.geojson",
+          title: "Surface Water",
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              outline: { color: [0,0,100], width: 1.5 }
+            },
+            visualVariables: [
+              {
+                type: "color",
+                field: "pfas_level",
+                stops: [
+                  { value: 0, color: [6, 36, 121, 0.6] },
+                  { value: 4, color: [6, 36, 121, 0.6] },
+                  { value: 5, color: [229, 233, 11, 0.7] },
+                  { value: 70, color: [229, 233, 11, 0.7] },
+                  { value: 71, color: [228, 10, 10, 0.8] }
+                ]
+              }
+            ]
+          },
+          popupTemplate: {
+            title: "{NAME}",
+            content: `
+              <b>Name:</b> {NAME}<br>
+              <b>PFAS Level:</b> {pfas_level} ppt<br>
+              <b>Acres:</b> {ACRES}<br>
+            
+            `
+          }
+        });
+        // Map
+        const map = new Map({
+          basemap: "gray-vector",
+          layers: [
+            watershedLayer,
+            surfaceWaterLayer,
+            airportLayer,
+            lincolnLayer
+          ]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-96.78, 40.81],
+          zoom: 11
+        });
+
+        //Toggle Logic
+        document.getElementById("toggleWatershed").addEventListener("change", function() {
+          watershedLayer.visible = this.checked;
+        });
+
+        document.getElementById("toggleSurface").addEventListener("change", function() {
+          surfaceWaterLayer.visible = this.checked;
+        });
+
+        document.getElementById("toggleAirport").addEventListener("change", function() {
+          airportLayer.visible = this.checked;
+        });
+
+        document.getElementById("toggleLincoln").addEventListener("change", function() {
+          lincolnLayer.visible = this.checked;
+        });
+
+        document.getElementById("toggleBasemap").addEventListener("change", function() {
+  if (this.checked) {
+    map.basemap = "satellite";
+  } else {
+    map.basemap = "gray-vector";
+  }
+});
+      });
+    </script>
+  </body>
+</html>
