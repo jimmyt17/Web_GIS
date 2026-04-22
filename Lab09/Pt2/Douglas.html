@@ -1,21 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Douglas County Map</title>
+  <title>Douglas County Income Map</title>
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Leaflet CSS -->
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     #map {
       height: 100vh;
       width: 100%;
+    }
+
+    /* Legend styling */
+    .info.legend {
+      background: white;
+      padding: 10px;
+      line-height: 18px;
+      color: #333;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+    }
+
+    .info.legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
     }
   </style>
 </head>
@@ -26,41 +42,109 @@
 
 <script>
 
+
 var map = L.map('map').setView([41.25, -96.0], 10);
 
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
+  subdomains: 'abcd',
+  maxZoom: 19
 }).addTo(map);
 
 
-fetch("Douglas_tracts.geojson")
+
+function getColor(d) {
+  return d > 100000 ? '#084081' :
+         d > 75000  ? '#0868ac' :
+         d > 50000  ? '#2b8cbe' :
+         d > 35000  ? '#4eb3d3' :
+         d > 20000  ? '#7bccc4' :
+                      '#a8ddb5';
+}
+
+
+
+function style(feature) {
+  return {
+    fillColor: getColor(feature.properties.incomeE),
+    weight: 0.7,
+    opacity: 1,
+    color: "#333",
+    fillOpacity: 0.75
+  };
+}
+
+
+
+function highlightFeature(e) {
+  var layer = e.target;
+
+  layer.setStyle({
+    weight: 2,
+    color: '#000',
+    fillOpacity: 0.9
+  });
+
+  layer.bringToFront();
+}
+
+function resetHighlight(e) {
+  geojson.resetStyle(e.target);
+}
+
+
+
+var geojson;
+
+fetch("https://jimmyt17.github.io/Web_GIS/Lab09/Pt2/Douglas_tracts.geojson")
   .then(response => response.json())
   .then(data => {
 
-    
-    L.geoJSON(data, {
-      
-      // Style (income-based coloring placeholder)
-      style: function(feature) {
-        return {
-          color: "#2b8cbe",
-          weight: 1,
-          fillOpacity: 0.5
-        };
-      },
+    geojson = L.geoJSON(data, {
 
-      
+      style: style,
+
       onEachFeature: function(feature, layer) {
+
         layer.bindPopup(
           "<b>Census Tract:</b> " + feature.properties.NAME +
-          "<br><b>Median Income:</b> $" + feature.properties.incomeE
+          "<br><b>Median Income:</b> $" + 
+          Number(feature.properties.incomeE).toLocaleString()
         );
+
+        layer.on({
+          mouseover: highlightFeature,
+          mouseout: resetHighlight
+        });
+
       }
 
     }).addTo(map);
 
   });
+
+
+
+var legend = L.control({position: 'bottomright'});
+
+legend.onAdd = function () {
+
+  var div = L.DomUtil.create('div', 'info legend');
+  var grades = [0, 20000, 35000, 50000, 75000, 100000];
+
+  div.innerHTML = "<b>Median Income</b><br>";
+
+  for (var i = 0; i < grades.length; i++) {
+    div.innerHTML +=
+      '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+      '$' + grades[i] +
+      (grades[i + 1] ? ' – $' + grades[i + 1] + '<br>' : '+');
+  }
+
+  return div;
+};
+
+legend.addTo(map);
 
 </script>
 
