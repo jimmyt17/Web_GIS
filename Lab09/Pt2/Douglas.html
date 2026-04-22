@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Douglas County Map</title>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script>
+
+var map = L.map('map').setView([41.25, -96.0], 10);
+
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+
+fetch("Douglas_tracts.geojson")
+  .then(response => response.json())
+  .then(data => {
+
+    
+    L.geoJSON(data, {
+      
+      // Style (income-based coloring placeholder)
+      style: function(feature) {
+        return {
+          color: "#2b8cbe",
+          weight: 1,
+          fillOpacity: 0.5
+        };
+      },
+
+      
+      onEachFeature: function(feature, layer) {
+        layer.bindPopup(
+          "<b>Census Tract:</b> " + feature.properties.NAME +
+          "<br><b>Median Income:</b> $" + feature.properties.incomeE
+        );
+      }
+
+    }).addTo(map);
+
+  });
+
+</script>
+
+</body>
+</html>
